@@ -1,6 +1,5 @@
 """List users use case."""
 
-import logging
 from typing import List, Dict, Any
 
 from app.application.dtos.user_dtos import GetUserResponse

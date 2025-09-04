@@ -1,6 +1,5 @@
 """Get user use case."""
 
-import logging
 from uuid import UUID
 
 from app.application.dtos.user_dtos import GetUserResponse

@@ -1,6 +1,5 @@
 """Create User use case."""
 
-import logging
 from uuid import uuid4
 
 from app.application.dtos.user_dtos import CreateUserRequest, CreateUserResponse

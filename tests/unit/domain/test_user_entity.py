@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.domain.entities.user import User
-from app.domain.exceptions import DomainError
 
 
 class TestUserEntity:

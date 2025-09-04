@@ -2,7 +2,6 @@
 
 import logging
 from uuid import UUID
-from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from dependency_injector.wiring import inject, Provide
