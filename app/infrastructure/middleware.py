@@ -6,6 +6,8 @@ from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .logging import request_id_context
+
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Middleware to add request ID to each incoming request."""
@@ -20,7 +22,10 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         if not request_id:
             request_id = str(uuid.uuid4())
         
-        # Store request ID in request state for use in handlers and logging
+        # Set request ID in context variable for automatic propagation to all logs
+        request_id_context.set(request_id)
+        
+        # Also store request ID in request state for backwards compatibility
         request.state.request_id = request_id
         
         # Process the request
@@ -50,8 +55,8 @@ class AccessLoggingMiddleware(BaseHTTPMiddleware):
         url = str(request.url)
         user_agent = request.headers.get("user-agent", "")
         
-        # Get request ID from state (set by RequestIDMiddleware)
-        request_id = getattr(request.state, "request_id", None)
+        # Get request ID from context (set by RequestIDMiddleware)
+        request_id = request_id_context.get()
         
         # Process the request
         response = await call_next(request)

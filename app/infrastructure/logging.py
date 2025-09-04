@@ -1,8 +1,25 @@
 import logging
 import sys
+from contextvars import ContextVar
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from pythonjsonlogger import jsonlogger
+
+# Context variable for request ID propagation
+request_id_context: ContextVar[str] = ContextVar("request_id", default="N/A")
+
+
+class RequestIDFilter(logging.Filter):
+    """Filter that adds request_id to all log records from context variable."""
+    
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            # Get request_id from context variable or record attribute
+            record.request_id = getattr(record, "request_id", request_id_context.get())
+        except Exception:
+            record.request_id = "N/A"
+        return True
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
@@ -15,10 +32,13 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         super().add_fields(log_record, record, message_dict)
         
         # Always include these fields
-        log_record["timestamp"] = self.formatTime(record, self.datefmt)
+        log_record["timestamp"] = datetime.fromtimestamp(
+            record.created, timezone.utc
+        ).isoformat()
         log_record["level"] = record.levelname
         log_record["name"] = record.name
         log_record["message"] = record.getMessage()
+        log_record["request_id"] = getattr(record, "request_id", "N/A")
         
         # Add function and line info for debugging
         if record.levelno >= logging.WARNING:
@@ -28,13 +48,13 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
 
 def setup_logging(log_level: str = "INFO") -> None:
-    """Set up JSON logging configuration."""
+    """Set up JSON logging configuration with request ID propagation."""
     
     # Create custom formatter
-    formatter = CustomJsonFormatter(
-        fmt="%(timestamp)s %(level)s %(name)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
+    formatter = CustomJsonFormatter()
+    
+    # Create request ID filter
+    request_id_filter = RequestIDFilter()
     
     # Configure root logger
     root_logger = logging.getLogger()
@@ -47,6 +67,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     # Create and configure handler
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
+    handler.addFilter(request_id_filter)  # Add filter to inject request_id
     root_logger.addHandler(handler)
     
     # Suppress some noisy loggers in production
