@@ -1,12 +1,15 @@
 import pytest
 from unittest.mock import Mock, AsyncMock
 from uuid import uuid4
+from pydantic import ValidationError as PydanticValidationError
 
-from app.application.use_cases.create_user import CreateUserUseCase, CreateUserRequest, CreateUserResponse
+from app.application.use_cases.create_user import CreateUserUseCase
+from app.application.dtos.user_dtos import CreateUserRequest, CreateUserResponse
+from app.application.exceptions import UserAlreadyExistsError
 from app.domain.entities.user import User
 from app.domain.value_objects import Email, Password
 from app.domain.services import PasswordService
-from app.domain.exceptions import DuplicateEntityError, ValidationError
+from app.domain.exceptions import ValidationError
 
 
 class TestCreateUserUseCase:
@@ -55,9 +58,9 @@ class TestCreateUserUseCase:
         
         # Assert
         assert isinstance(response, CreateUserResponse)
-        assert response.user_id == user_id
+        assert response.id == user_id
         assert response.email == "test@example.com"
-        assert response.is_active is True
+        assert response.created_at == created_user.created_at
         
         # Verify interactions
         mock_user_repository.find_by_email.assert_called_once()
@@ -90,7 +93,7 @@ class TestCreateUserUseCase:
         mock_user_repository.find_by_email.return_value = existing_user
         
         # Act & Assert
-        with pytest.raises(DuplicateEntityError, match="User with email .* already exists"):
+        with pytest.raises(UserAlreadyExistsError, match="User with email .* already exists"):
             await use_case.execute(request)
         
         # Verify password service was not called
@@ -118,21 +121,29 @@ class TestCreateUserUseCase:
         mock_user_repository.find_by_email.assert_not_called()
         mock_user_repository.save.assert_not_called()
     
+    def test_create_user_invalid_password_pydantic_validation(self) -> None:
+        # Test that Pydantic validates password length before the request reaches the use case
+        with pytest.raises(PydanticValidationError):
+            CreateUserRequest(
+                email="test@example.com",
+                password="weak"  # Too short - less than 8 characters
+            )
+    
     @pytest.mark.asyncio
-    async def test_create_user_invalid_password(
+    async def test_create_user_invalid_password_value_object_validation(
         self,
         use_case: CreateUserUseCase,
         mock_user_repository: AsyncMock,
         mock_password_service: Mock
     ) -> None:
-        # Arrange
+        # Arrange - password passes Pydantic validation but fails value object validation
         request = CreateUserRequest(
             email="test@example.com",
-            password="weak"  # Too weak password
+            password="weak1234"  # Missing uppercase, special character
         )
         
         # Act & Assert
-        with pytest.raises(ValidationError, match="Password must be at least 8 characters"):
+        with pytest.raises(ValidationError, match="Password must contain at least one uppercase letter"):
             await use_case.execute(request)
         
         # Verify no repository calls were made
@@ -173,13 +184,15 @@ class TestCreateUserUseCase:
         assert request.password == "TestPassword123!"
     
     def test_create_user_response_creation(self) -> None:
+        from datetime import datetime, timezone
         user_id = uuid4()
+        created_at = datetime.now(timezone.utc)
         response = CreateUserResponse(
-            user_id=user_id,
+            id=user_id,
             email="test@example.com",
-            is_active=True
+            created_at=created_at
         )
         
-        assert response.user_id == user_id
+        assert response.id == user_id
         assert response.email == "test@example.com"
-        assert response.is_active is True
+        assert response.created_at == created_at

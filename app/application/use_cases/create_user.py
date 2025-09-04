@@ -4,9 +4,9 @@ import logging
 from uuid import uuid4
 
 from app.application.dtos.user_dtos import CreateUserRequest, CreateUserResponse
+from app.application.exceptions import UserAlreadyExistsError
 from app.application.ports.user_repository import UserRepositoryPort
 from app.domain.entities.user import User
-from app.domain.exceptions import DuplicateEntityError
 from app.domain.services.password_service import PasswordService
 from app.domain.value_objects import Email, Password
 from app.infrastructure.logging import get_logger
@@ -35,7 +35,7 @@ class CreateUserUseCase:
             CreateUserResponse with the created user information
             
         Raises:
-            DuplicateEntityError: If user with email already exists
+            UserAlreadyExistsError: If user with email already exists
             ValidationError: If email or password validation fails
         """
         self.logger.info(f"Creating user with email: {request.email}")
@@ -48,7 +48,7 @@ class CreateUserUseCase:
         existing_user = await self.user_repository.find_by_email(email)
         if existing_user:
             self.logger.warning(f"Attempt to create user with existing email: {request.email}")
-            raise DuplicateEntityError(f"User with email {request.email} already exists")
+            raise UserAlreadyExistsError(f"User with email {request.email} already exists")
         
         # Hash the password
         hashed_password = self.password_service.hash_password(password)
@@ -67,7 +67,7 @@ class CreateUserUseCase:
         
         # Return response DTO
         return CreateUserResponse(
-            user_id=saved_user.id,
+            id=saved_user.id,
             email=saved_user.email,
-            is_active=saved_user.is_active
+            created_at=saved_user.created_at
         )

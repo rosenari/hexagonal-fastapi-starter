@@ -1,19 +1,25 @@
 """User-related Data Transfer Objects."""
 
-from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
+from pydantic import BaseModel, Field
 
 
-@dataclass(frozen=True)
-class CreateUserRequest:
+class CreateUserRequest(BaseModel):
     """Request DTO for creating a new user."""
-    email: str
-    password: str
+    email: str = Field(..., description="User email address")
+    password: str = Field(..., min_length=8, description="User password")
 
 
-@dataclass(frozen=True)
-class CreateUserResponse:
+class CreateUserResponse(BaseModel):
     """Response DTO for user creation."""
-    user_id: UUID
-    email: str
-    is_active: bool
+    id: UUID = Field(..., description="User ID")
+    email: str = Field(..., description="User email address")
+    created_at: datetime = Field(..., description="User creation timestamp")
+
+
+class GetUserResponse(BaseModel):
+    """Response DTO for getting a user."""
+    id: UUID = Field(..., description="User ID")
+    email: str = Field(..., description="User email address")
+    created_at: datetime = Field(..., description="User creation timestamp")

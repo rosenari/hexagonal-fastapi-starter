@@ -1,9 +1,9 @@
 """User repository implementation using SQLAlchemy."""
 
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports.user_repository import UserRepositoryPort
@@ -42,6 +42,10 @@ class UserRepository(UserRepositoryPort):
         
         self.logger.info(f"Found user: {user_id}")
         return self._model_to_entity(user_model)
+    
+    async def get_by_id(self, user_id: UUID, session: Optional[AsyncSession] = None) -> Optional[User]:
+        """Get a user by their ID (alias for find_by_id)."""
+        return await self.find_by_id(user_id, session)
     
     async def find_by_email(self, email: Email, session: Optional[AsyncSession] = None) -> Optional[User]:
         """Find a user by their email address."""
@@ -95,6 +99,43 @@ class UserRepository(UserRepositoryPort):
         
         self.logger.info(f"User saved: {user.id}")
         return self._model_to_entity(user_model)
+    
+    async def list_users(self, offset: int = 0, limit: int = 10, session: Optional[AsyncSession] = None) -> List[User]:
+        """List users with pagination."""
+        if session is None:
+            async with self.database_manager.get_session() as session:
+                return await self._list_users_impl(offset, limit, session)
+        else:
+            return await self._list_users_impl(offset, limit, session)
+    
+    async def _list_users_impl(self, offset: int, limit: int, session: AsyncSession) -> List[User]:
+        self.logger.info(f"Listing users with offset: {offset}, limit: {limit}")
+        
+        stmt = select(UserModel).offset(offset).limit(limit).order_by(UserModel.created_at.desc())
+        result = await session.execute(stmt)
+        user_models = result.scalars().all()
+        
+        users = [self._model_to_entity(model) for model in user_models]
+        self.logger.info(f"Found {len(users)} users")
+        return users
+    
+    async def count(self, session: Optional[AsyncSession] = None) -> int:
+        """Count total number of users."""
+        if session is None:
+            async with self.database_manager.get_session() as session:
+                return await self._count_impl(session)
+        else:
+            return await self._count_impl(session)
+    
+    async def _count_impl(self, session: AsyncSession) -> int:
+        self.logger.info("Counting users")
+        
+        stmt = select(func.count(UserModel.id))
+        result = await session.execute(stmt)
+        count = result.scalar()
+        
+        self.logger.info(f"Total users: {count}")
+        return count
     
     async def delete(self, user_id: UUID, session: Optional[AsyncSession] = None) -> bool:
         """Delete a user by their ID. Returns True if deleted, False if not found."""

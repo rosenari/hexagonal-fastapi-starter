@@ -1,7 +1,7 @@
 """User repository port (interface)."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from app.domain.entities.user import User
@@ -17,6 +17,11 @@ class UserRepositoryPort(ABC):
         pass
     
     @abstractmethod
+    async def get_by_id(self, user_id: UUID) -> Optional[User]:
+        """Get a user by their ID (alias for find_by_id)."""
+        pass
+    
+    @abstractmethod
     async def find_by_email(self, email: Email) -> Optional[User]:
         """Find a user by their email address."""
         pass
@@ -24,6 +29,16 @@ class UserRepositoryPort(ABC):
     @abstractmethod
     async def save(self, user: User) -> User:
         """Save a user entity."""
+        pass
+    
+    @abstractmethod
+    async def list_users(self, offset: int = 0, limit: int = 10) -> List[User]:
+        """List users with pagination."""
+        pass
+    
+    @abstractmethod
+    async def count(self) -> int:
+        """Count total number of users."""
         pass
     
     @abstractmethod

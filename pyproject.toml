@@ -21,6 +21,7 @@ dependencies = [
     "redis>=5.2.0",
     "aiosqlite>=0.21.0",
     "greenlet>=3.2.4",
+    "dependency-injector>=4.48.1",
 ]
 
 [project.optional-dependencies]
