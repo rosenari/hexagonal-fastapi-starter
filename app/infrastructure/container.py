@@ -49,18 +49,18 @@ class ServiceContainer(containers.DeclarativeContainer):
     repositories = providers.DependenciesContainer()
     
     # Use cases as factories (new instance per request)
-    create_user_use_case = providers.Factory(
+    create_user_use_case :CreateUserUseCase = providers.Factory(
         CreateUserUseCase,
         user_repository=repositories.user_repository,
         password_service=infrastructure.password_service
     )
     
-    get_user_use_case = providers.Factory(
+    get_user_use_case: GetUserUseCase = providers.Factory(
         GetUserUseCase,
         user_repository=repositories.user_repository
     )
     
-    list_users_use_case = providers.Factory(
+    list_users_use_case: ListUsersUseCase = providers.Factory(
         ListUsersUseCase,
         user_repository=repositories.user_repository
     )
@@ -73,19 +73,19 @@ class ApplicationContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
     
     # Infrastructure container
-    infrastructure = providers.Container(
+    infrastructure: InfrastructureContainer = providers.Container(
         InfrastructureContainer,
         config=config
     )
     
     # Repository container with infrastructure injection
-    repositories = providers.Container(
+    repositories: RepositoryContainer = providers.Container(
         RepositoryContainer,
         infrastructure=infrastructure
     )
     
     # Service container with infrastructure and repository injection
-    services = providers.Container(
+    services: ServiceContainer = providers.Container(
         ServiceContainer,
         infrastructure=infrastructure,
         repositories=repositories
