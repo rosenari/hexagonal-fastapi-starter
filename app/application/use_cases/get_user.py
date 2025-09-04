@@ -5,6 +5,7 @@ from uuid import UUID
 from app.application.dtos.user_dtos import GetUserResponse
 from app.application.ports.user_repository import UserRepositoryPort
 from app.application.exceptions import UserNotFoundError
+import logging
 
 logger = logging.getLogger(__name__)
 

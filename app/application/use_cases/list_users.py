@@ -1,9 +1,10 @@
 """List users use case."""
 
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 from app.application.dtos.user_dtos import GetUserResponse
 from app.application.ports.user_repository import UserRepositoryPort
+import logging
 
 logger = logging.getLogger(__name__)
 
